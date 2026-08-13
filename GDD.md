@@ -408,10 +408,11 @@ CCTV/경비실 관찰
 
 | ID | 요구사항 | 상태 |
 | --- | --- | --- |
-| REQ-ENV-001 | 게시판은 세로 크기를 축소하고 투명 PNG 안내물을 원본 비율과 알파 영역을 유지한 채 확대·중첩 표시해야 한다. | Implemented |
-| REQ-ENV-002 | CCTV 오른쪽에는 플레이어 방향으로 팬이 회전하고 헤드가 천천히 좌우 왕복하는 선풍기가 있어야 한다. | Implemented |
+| REQ-ENV-001 | 게시판 틀은 보드 표면보다 `0.05` 돌출되고, 투명 PNG 윗줄은 `0.052`, 아랫줄은 `0.051` 떨어져 원본 비율과 알파 영역을 유지한 채 중첩 표시되어야 한다. | Implemented |
+| REQ-ENV-002 | CCTV 뒤쪽의 플레이어 오른쪽 벽면 앞에는 플레이어 방향으로 팬이 회전하고 헤드가 천천히 좌우 왕복하는 선풍기가 있어야 한다. | Implemented |
 | REQ-ENV-003 | 주 조명은 천장 조명 기구에서 방출되며 긴 간격으로 짧게 깜빡여야 한다. | Implemented |
 | REQ-ENV-004 | 창문 반대편 벽에는 열리지 않는 출입문이 있어야 한다. | Implemented |
+| REQ-ENV-005 | 플레이어의 고정 좌석은 책상 장치를 확인하고 신고 버튼으로 복귀하기 쉬운 가까운 거리에 있어야 한다. | Implemented |
 
 | ID | 작업 | 관련 요구사항 | 상태 |
 | --- | --- | --- | --- |
@@ -419,6 +420,7 @@ CCTV/경비실 관찰
 | TASK-ENV-002 | 팬 회전과 헤드 왕복 애니메이션을 가진 3D 선풍기 구현 | REQ-ENV-002 | Implemented |
 | TASK-ENV-003 | 천장 조명 기구와 저빈도 무작위 깜빡임 구현 | REQ-ENV-003 | Implemented |
 | TASK-ENV-004 | 후면 벽과 고정 출입문 모델 구현 | REQ-ENV-004 | Implemented |
+| TASK-ENV-005 | 고정 카메라를 책상 방향으로 이동해 상호작용 거리 조정 | REQ-ENV-005 | Implemented |
 
 ### FEAT-TIME-001: 3D 디지털 근무 시계
 
@@ -439,14 +441,18 @@ CCTV/경비실 관찰
 | ID | 요구사항 | 상태 |
 | --- | --- | --- |
 | REQ-AV-001 | CCTV에는 타임코드, 채널명, 노이즈 효과를 합성할 수 있어야 한다. | Planned |
-| REQ-AV-002 | 음향은 최초 사용자 입력 이후 활성화되어야 한다. | Planned |
+| REQ-AV-002 | 음향은 최초 사용자 입력 이후 활성화되어야 한다. | Implemented |
 | REQ-AV-003 | 핵심 판별 정보는 시각 또는 자막으로도 확인할 수 있어야 한다. | Planned |
+| REQ-AV-004 | 일반 경비실 상태에서는 우측 선풍기와 창밖 귀뚜라미의 작은 공간 음향을 반복하고, CCTV 상태에서는 이를 멈춘 뒤 작은 라디오 잡음을 반복해야 하며, 사망 시 과도하지 않은 점프스케어 음향을 한 번 재생해야 한다. | Implemented |
+| REQ-AV-005 | 게임 시작 화면 상단에는 점프스케어와 호러 사운드 포함 경고가 표시되고 저장소 문서에는 음원 출처가 명시되어야 한다. | Implemented |
 
 | ID | 작업 | 관련 요구사항 | 상태 |
 | --- | --- | --- | --- |
 | TASK-AV-001 | CCTV 후처리 효과 설계 | REQ-AV-001 | Planned |
-| TASK-AV-002 | 오디오 초기화와 믹서 구조 설계 | REQ-AV-002 | Planned |
+| TASK-AV-002 | 최초 시작 입력 기반 Web Audio 초기화 구현 | REQ-AV-002 | Implemented |
 | TASK-AV-003 | 자막 및 대체 단서 표시 설계 | REQ-AV-003 | Planned |
+| TASK-AV-004 | 모드별 공간 환경음·CCTV 잡음·사망 효과음 전환 구현 | REQ-AV-004 | Implemented |
+| TASK-AV-005 | 시작 화면 콘텐츠 경고와 README 음원 크레디트 작성 | REQ-AV-005 | Implemented |
 
 ---
 
@@ -469,6 +475,8 @@ CCTV/경비실 관찰
 | AC-AV-001 | REQ-AV-001 | CCTV 영상이 재생 중이다. | 화면 효과가 활성화된다. | 판별 가능성을 훼손하지 않는 범위에서 타임코드·채널명·노이즈가 표시된다. | Not tested |
 | AC-AV-002 | REQ-AV-002 | 페이지를 처음 열었고 사용자 입력이 없다. | 게임 시작 버튼을 누른다. | 오디오 컨텍스트가 활성화되고 설정된 환경음이 재생된다. | Not tested |
 | AC-AV-003 | REQ-AV-003 | 음성 단서가 재생된다. | 자막 기능이 켜져 있다. | 의미와 타이밍이 대응되는 자막 또는 시각 단서가 제공된다. | Not tested |
+| AC-AV-004 | REQ-AV-004 | 근무가 시작되었다. | 경비실과 CCTV 화면 사이를 전환하거나 게임 오버된다. | 경비실에서는 우측 선풍기와 창밖 귀뚜라미, CCTV에서는 라디오 잡음, 게임 오버에서는 점프스케어가 지정된 작은 음량으로 재생된다. | Not tested |
+| AC-AV-005 | REQ-AV-005 | 사용자가 게임 또는 저장소 첫 화면을 연다. | 시작 화면과 README를 확인한다. | 호러 사운드 경고와 네 음원 저작자·Pixabay 링크를 확인할 수 있다. | Not tested |
 | AC-INT-001 | REQ-INT-001 | 플레이어가 경비실의 책상 앞에 앉아 있다. | Pointer Lock 상태에서 마우스를 움직인다. | 시점이 정의된 상하좌우 각도 안에서 회전한다. | Not tested |
 | AC-INT-002 | REQ-INT-002 | 상호작용 가능한 사물이 시야에 있다. | 중앙 Dot을 사물 위에 놓는다. | Dot과 대상 안내가 상호작용 가능 상태로 변한다. | Not tested |
 | AC-INT-003 | REQ-INT-003 | Dot이 모니터 또는 노트를 가리킨다. | F를 누른 뒤 다시 F 또는 Esc를 누른다. | 해당 화면이 열렸다가 경비실 시점으로 돌아온다. | Not tested |
@@ -482,6 +490,7 @@ CCTV/경비실 관찰
 | AC-ENV-002 | REQ-ENV-002 | 경비실 3D 장면이 실행 중이다. | CCTV 오른쪽의 선풍기를 바라본다. | 팬은 빠르게 회전하고 헤드는 플레이어 방향을 중심으로 천천히 좌우 왕복한다. | Not tested |
 | AC-ENV-003 | REQ-ENV-003 | 경비실 3D 장면이 실행 중이다. | 충분한 시간 동안 천장 조명을 관찰한다. | 조명은 대부분 안정적으로 켜져 있고 긴 불규칙 간격으로만 짧게 깜빡인다. | Not tested |
 | AC-ENV-004 | REQ-ENV-004 | 플레이어가 창문 반대편을 바라본다. | 후면 벽을 확인한다. | 닫힌 출입문과 문틀 및 손잡이가 표시된다. | Not tested |
+| AC-ENV-005 | REQ-ENV-005 | 플레이어가 근무를 시작한다. | 정면 책상과 장치를 바라본다. | 이전 배치보다 가까운 좌석에서 장치들을 조준할 수 있다. | Not tested |
 | AC-TIME-001 | REQ-TIME-001 | 경비실 3D 장면이 표시되어 있다. | 플레이어가 모니터 왼쪽 책상 위를 바라본다. | 검은 본체와 붉은 7세그먼트 표시판을 가진 디지털 시계가 보인다. | Not tested |
 | AC-TIME-002 | REQ-TIME-002 | 근무를 시작해 시계가 00:00을 표시한다. | 현실 시간 10초가 경과한다. | 시계가 00:02를 표시한다. | Not tested |
 | AC-TIME-003 | REQ-TIME-003 | 근무가 진행 중이다. | 게임 시간이 다음 분으로 바뀐다. | 시계는 `93.09.14`와 새 시간을 표시하고 CCTV 타임코드도 `1993-09-14`와 같은 시간으로 갱신된다. | Not tested |
@@ -574,11 +583,12 @@ CCTV/경비실 관찰
 
 | 기능 | 요구사항 | 구현 대상 | 검증 |
 | --- | --- | --- | --- |
-| FEAT-INT-001 | REQ-INT-001~005 | `src/Game.tsx`, `src/styles.css` | Compile Verified / Runtime not tested |
+| FEAT-INT-001 | REQ-INT-001~006 | `src/Game.tsx`, `src/styles.css` | Compile Verified / Runtime not tested |
 | FEAT-TIME-001 | REQ-TIME-001~003 | `src/Game.tsx` | Compile Verified / Runtime not tested |
 | FEAT-OBS-001 | REQ-OBS-001~006 | `src/Game.tsx`, `Assets/cctv/vid/normal`, `Assets/cctv/vid/abnormal` | Compile Verified / Runtime not tested |
 | FEAT-SURV-001 | REQ-SURV-001 | `src/Game.tsx`, `src/styles.css` | Compile Verified / 30-minute runtime not tested |
-| FEAT-AV-001 | REQ-AV-001 | `src/styles.css` | Compile Verified / Visual QA not tested |
+| FEAT-ENV-001 | REQ-ENV-001~005 | `src/Game.tsx`, `Assets/board` | Compile Verified / Visual QA not tested |
+| FEAT-AV-001 | REQ-AV-001~005 | `src/Game.tsx`, `src/styles.css`, `Assets/Sounds`, `README.md` | Compile Verified / Audio QA not tested |
 | GitHub Pages 배포 | 정적 하위 경로 빌드 | `vite.config.ts`, `.github/workflows/deploy-pages.yml` | Local build verified / Remote deploy not tested |
 
 ### 이름 사용 규칙

@@ -179,6 +179,18 @@ kbd {
   position: relative;
 }
 
+.content-warning {
+  position: fixed !important;
+  top: 18px;
+  left: 50%;
+  width: min(90vw, 620px);
+  margin: 0;
+  transform: translateX(-50%);
+  color: rgba(236, 184, 161, 0.9);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
 .eyebrow {
   margin: 0 0 13px;
   color: #8e9f85;

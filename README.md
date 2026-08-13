@@ -70,3 +70,12 @@ git push -u origin main
 
 3. GitHub 저장소의 `Settings → Pages → Build and deployment → Source`에서 `GitHub Actions`를 선택합니다.
 4. `Actions` 탭의 `Deploy GEUMMONGNYEON APARTMENTS` 작업이 완료되면 Pages 주소에서 플레이할 수 있습니다.
+
+## 사운드 출처
+
+다음 음원은 Pixabay의 무료 사용 라이선스로 제공됩니다.
+
+- `subhamita-table-fan-sound-01-318509.mp3` — [Subhasis Mandal](https://pixabay.com/ko/users/subhamita-45920507/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=318509), [Pixabay Sound Effects](https://pixabay.com/sound-effects//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=318509)
+- `soundshmyak-jump-scares-3-159307.mp3` — [Ilya](https://pixabay.com/ko/users/soundshmyak-38417752/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=159307), [Pixabay Sound Effects](https://pixabay.com/sound-effects//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=159307)
+- `farshad_hamzavi-cricket-ambience-night-1-422171.mp3` — [Farshad Hamzavi](https://pixabay.com/ko/users/farshad_hamzavi-45259344/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=422171), [Pixabay Sound Effects](https://pixabay.com/sound-effects//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=422171)
+- `freesound_community-radio-static-2-26831.mp3` — [freesound_community](https://pixabay.com/ko/users/freesound_community-46691455/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=26831), [Pixabay Sound Effects](https://pixabay.com/sound-effects//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=26831)

@@ -31,6 +31,25 @@ const boardAssets = import.meta.glob("../Assets/board/*.{png,jpg,jpeg,webp}", {
   import: "default",
 }) as Record<string, string>;
 
+const soundAssets = import.meta.glob("../Assets/Sounds/*.{mp3,wav,ogg}", {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
+
+function findSoundAsset(filename: string) {
+  return Object.entries(soundAssets).find(([path]) =>
+    path.replaceAll("\\", "/").toLowerCase().endsWith(`/${filename.toLowerCase()}`),
+  )?.[1];
+}
+
+const SOUNDS = {
+  fan: findSoundAsset("subhamita-table-fan-sound-01-318509.mp3"),
+  cricket: findSoundAsset("farshad_hamzavi-cricket-ambience-night-1-422171.mp3"),
+  jumpScare: findSoundAsset("soundshmyak-jump-scares-3-159307.mp3"),
+  radioStatic: findSoundAsset("freesound_community-radio-static-2-26831.mp3"),
+} as const;
+
 const complexGateVideo = Object.entries(environmentAssets).find(([path]) =>
   path.replaceAll("\\", "/").toLowerCase().endsWith("/complexgate.mp4"),
 )?.[1];
@@ -253,6 +272,12 @@ export function Game() {
   const shiftStartRef = useRef<number | null>(null);
   const gameTimeRef = useRef("00:00");
   const alarmPressStartedRef = useRef<number | null>(null);
+  const audioListenerRef = useRef<THREE.AudioListener | null>(null);
+  const fanSoundRef = useRef<THREE.PositionalAudio | null>(null);
+  const cricketSoundRef = useRef<THREE.PositionalAudio | null>(null);
+  const staticSoundRef = useRef<THREE.PositionalAudio | null>(null);
+  const jumpScareSoundRef = useRef<THREE.Audio | null>(null);
+  const gameAudioEnabledRef = useRef(false);
 
   const [mode, setMode] = useState<Mode>("title");
   const [hovered, setHovered] = useState<Interactable | null>(null);
@@ -336,6 +361,8 @@ export function Game() {
   }, []);
 
   const startGame = useCallback(() => {
+    gameAudioEnabledRef.current = true;
+    void audioListenerRef.current?.context.resume();
     shiftStartRef.current = performance.now();
     gameTimeRef.current = "00:00";
     setGameTime("00:00");
@@ -362,6 +389,7 @@ export function Game() {
         setGameTime("06:00");
         shiftStartRef.current = null;
         modeRef.current = "win";
+        gameAudioEnabledRef.current = false;
         anomalyRef.current = null;
         setAnomaly(null);
         setStatus("06:00 · 야간 근무 종료");
@@ -400,11 +428,17 @@ export function Game() {
           return;
         }
         modeRef.current = "gameover";
+        gameAudioEnabledRef.current = false;
         anomalyRef.current = null;
         setAnomaly(null);
         setRemaining(0);
         setMode("gameover");
         setStatus(anomaly.phase === "seen" ? "보고 시간 초과" : "이상 채널 확인 실패");
+        const jumpScareSound = jumpScareSoundRef.current;
+        if (jumpScareSound?.buffer) {
+          if (jumpScareSound.isPlaying) jumpScareSound.stop();
+          jumpScareSound.play();
+        }
         document.exitPointerLock?.();
       }
     }, 50);
@@ -477,9 +511,13 @@ export function Game() {
     scene.fog = new THREE.FogExp2(0x050706, 0.055);
 
     const camera = new THREE.PerspectiveCamera(52, mount.clientWidth / mount.clientHeight, 0.1, 40);
-    camera.position.set(0, 1.68, 3.35);
+    camera.position.set(0, 1.68, 2.95);
     camera.rotation.order = "YXZ";
     camera.rotation.x = -0.12;
+
+    const audioListener = new THREE.AudioListener();
+    audioListenerRef.current = audioListener;
+    camera.add(audioListener);
 
     scene.add(new THREE.HemisphereLight(0x748275, 0x10110f, 0.55));
     const ceilingLight = new THREE.PointLight(0xd8d4b7, 18, 9, 2);
@@ -524,10 +562,10 @@ export function Game() {
     const boardTextures: THREE.Texture[] = [];
     const noticeBoard = new THREE.Group();
     noticeBoard.add(createBox([0.13, 1.085, 3.45], [-3.88, 2.02, -0.3], 0x5b4029));
-    noticeBoard.add(createBox([0.18, 0.1, 3.65], [-3.78, 2.63, -0.3], 0x241a12));
-    noticeBoard.add(createBox([0.18, 0.1, 3.65], [-3.78, 1.41, -0.3], 0x241a12));
-    noticeBoard.add(createBox([0.18, 1.23, 0.1], [-3.78, 2.02, -2.1], 0x241a12));
-    noticeBoard.add(createBox([0.18, 1.23, 0.1], [-3.78, 2.02, 1.5], 0x241a12));
+    noticeBoard.add(createBox([0.18, 0.1, 3.65], [-3.855, 2.63, -0.3], 0x241a12));
+    noticeBoard.add(createBox([0.18, 0.1, 3.65], [-3.855, 1.41, -0.3], 0x241a12));
+    noticeBoard.add(createBox([0.18, 1.23, 0.1], [-3.855, 2.02, -2.1], 0x241a12));
+    noticeBoard.add(createBox([0.18, 1.23, 0.1], [-3.855, 2.02, 1.5], 0x241a12));
 
     const textureLoader = new THREE.TextureLoader();
     Object.values(boardAssets).sort().forEach((url, index) => {
@@ -553,7 +591,8 @@ export function Game() {
       boardTextures.push(texture);
       const column = index % 4;
       const row = Math.floor(index / 4);
-      paper.position.set(-3.805, 2.28 - row * 0.52, -1.56 + column * 0.84);
+      const paperDistanceFromBoard = row === 0 ? 0.052 : 0.051;
+      paper.position.set(-3.815 + paperDistanceFromBoard, 2.28 - row * 0.52, -1.56 + column * 0.84);
       paper.rotation.y = Math.PI / 2;
       noticeBoard.add(paper);
     });
@@ -627,22 +666,22 @@ export function Game() {
     room.add(monitorGroup);
 
     const fan = new THREE.Group();
-    fan.position.set(2.42, 0, 0.12);
+    fan.position.set(3.38, 0, -0.75);
     const fanBase = new THREE.Mesh(
       new THREE.CylinderGeometry(0.32, 0.38, 0.1, 28),
       new THREE.MeshStandardMaterial({ color: 0x303732, metalness: 0.25, roughness: 0.58 }),
     );
-    fanBase.position.y = 0.94;
+    fanBase.position.y = 0.1;
     fan.add(fanBase);
     const fanStem = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.045, 0.055, 0.58, 16),
+      new THREE.CylinderGeometry(0.045, 0.055, 0.72, 16),
       new THREE.MeshStandardMaterial({ color: 0x3b433d, metalness: 0.45, roughness: 0.48 }),
     );
-    fanStem.position.y = 1.23;
+    fanStem.position.y = 0.46;
     fan.add(fanStem);
 
     const fanHead = new THREE.Group();
-    fanHead.position.y = 1.58;
+    fanHead.position.y = 0.88;
     const fanMotor = new THREE.Mesh(
       new THREE.CylinderGeometry(0.13, 0.13, 0.32, 20),
       new THREE.MeshStandardMaterial({ color: 0x252b27, metalness: 0.25, roughness: 0.62 }),
@@ -758,6 +797,54 @@ export function Game() {
     clock.add(clockGlow);
     room.add(clock);
 
+    const audioLoader = new THREE.AudioLoader();
+    const loadLoopingSound = (
+      sound: THREE.Audio<GainNode> | THREE.PositionalAudio,
+      url: string | undefined,
+      volume: number,
+    ) => {
+      sound.setLoop(true);
+      sound.setVolume(volume);
+      if (!url) return;
+      audioLoader.load(url, (buffer) => sound.setBuffer(buffer));
+    };
+
+    const fanSound = new THREE.PositionalAudio(audioListener);
+    fanSound.setRefDistance(1.2);
+    fanSound.setRolloffFactor(1.15);
+    fanSound.setDistanceModel("inverse");
+    fanSound.position.set(0, 0.88, 0);
+    fanSoundRef.current = fanSound;
+    fan.add(fanSound);
+    loadLoopingSound(fanSound, SOUNDS.fan, 0.16);
+
+    const cricketSound = new THREE.PositionalAudio(audioListener);
+    cricketSound.setRefDistance(2.2);
+    cricketSound.setRolloffFactor(0.7);
+    cricketSound.setDistanceModel("inverse");
+    cricketSound.position.set(0, 2.2, -0.25);
+    cricketSoundRef.current = cricketSound;
+    windowGroup.add(cricketSound);
+    loadLoopingSound(cricketSound, SOUNDS.cricket, 0.11);
+
+    const staticSound = new THREE.PositionalAudio(audioListener);
+    staticSound.setRefDistance(1.1);
+    staticSound.setRolloffFactor(1);
+    staticSound.setDistanceModel("inverse");
+    staticSound.position.set(0, 1.55, 0.48);
+    staticSoundRef.current = staticSound;
+    monitorGroup.add(staticSound);
+    loadLoopingSound(staticSound, SOUNDS.radioStatic, 0.13);
+
+    const jumpScareSound = new THREE.Audio(audioListener);
+    jumpScareSound.setLoop(false);
+    jumpScareSound.setVolume(0.24);
+    jumpScareSoundRef.current = jumpScareSound;
+    camera.add(jumpScareSound);
+    if (SOUNDS.jumpScare) {
+      audioLoader.load(SOUNDS.jumpScare, (buffer) => jumpScareSound.setBuffer(buffer));
+    }
+
     scene.add(room);
 
     const raycaster = new THREE.Raycaster();
@@ -819,6 +906,20 @@ export function Game() {
       fanRotor.rotation.z -= deltaSeconds * 22;
       fanHead.rotation.y = Math.sin(t * 0.55) * 0.32;
 
+      const audioEnabled = gameAudioEnabledRef.current
+        && modeRef.current !== "title"
+        && modeRef.current !== "gameover"
+        && modeRef.current !== "win";
+      const monitorIsOpen = modeRef.current === "monitor";
+      const syncLoopingSound = (sound: THREE.Audio<GainNode> | THREE.PositionalAudio, shouldPlay: boolean) => {
+        if (!sound.buffer) return;
+        if (shouldPlay && !sound.isPlaying) sound.play();
+        if (!shouldPlay && sound.isPlaying) sound.pause();
+      };
+      syncLoopingSound(fanSound, audioEnabled && !monitorIsOpen);
+      syncLoopingSound(cricketSound, audioEnabled && !monitorIsOpen);
+      syncLoopingSound(staticSound, audioEnabled && monitorIsOpen);
+
       const alarmPressElapsed = alarmPressStartedRef.current === null
         ? Number.POSITIVE_INFINITY
         : now - alarmPressStartedRef.current;
@@ -878,6 +979,14 @@ export function Game() {
       });
       clockDisplay.texture.dispose();
       boardTextures.forEach((texture) => texture.dispose());
+      [fanSound, cricketSound, staticSound, jumpScareSound].forEach((sound) => {
+        if (sound.isPlaying) sound.stop();
+      });
+      fanSoundRef.current = null;
+      cricketSoundRef.current = null;
+      staticSoundRef.current = null;
+      jumpScareSoundRef.current = null;
+      audioListenerRef.current = null;
       exteriorVideo?.pause();
       if (exteriorVideo) {
         exteriorVideo.removeAttribute("src");
@@ -940,6 +1049,7 @@ export function Game() {
       {mode === "title" && (
         <section className="title-screen">
           <div className="title-noise" aria-hidden="true" />
+          <p className="content-warning" role="note">⚠ 점프스케어와 호러 사운드가 포함되어 있습니다.</p>
           <p className="eyebrow">GEUMMONGNYEON APARTMENTS</p>
           <h1>금목련아파트</h1>
           <p className="shift-copy">야간 경비 근무 기록 · 00:00—06:00</p>
