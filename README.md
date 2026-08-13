@@ -1,5 +1,7 @@
 # GEUMMONGNYEON APARTMENTS / 금목련아파트
 
+[▶ PLAY ON GITHUB PAGES](https://anchobykim.github.io/GeummongnyeonApartments/)
+
 아날로그 호러와 나폴리탄 규칙 괴담을 결합한 1인칭 웹게임 프로토타입입니다.
 
 ## 현재 구현

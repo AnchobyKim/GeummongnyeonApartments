@@ -333,6 +333,10 @@ export function Game() {
       setRemaining(left / 1000);
       if (left <= 0) {
         window.clearInterval(tick);
+        modeRef.current = "gameover";
+        anomalyRef.current = null;
+        setAnomaly(null);
+        setRemaining(0);
         setMode("gameover");
         setStatus("보고 시간 초과");
         document.exitPointerLock?.();
