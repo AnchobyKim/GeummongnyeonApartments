@@ -15,6 +15,20 @@ const videoAssets = import.meta.glob("../cctv/vid/**/*.mp4", {
   import: "default",
 }) as Record<string, string>;
 
+const environmentAssets = import.meta.glob([
+  "../ComplexGate.mp4",
+  "../environment/**/*.mp4",
+  "../cctv/vid/**/ComplexGate.mp4",
+], {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
+
+const complexGateVideo = Object.entries(environmentAssets).find(([path]) =>
+  path.replaceAll("\\", "/").toLowerCase().endsWith("/complexgate.mp4"),
+)?.[1];
+
 const VIDEO_KEYWORDS = {
   entrance: ["entrance", "entry", "lobby"],
   elevator: ["elevator", "lift"],
@@ -128,7 +142,7 @@ function formatShiftTime(elapsedMilliseconds: number) {
 function createClockDisplay() {
   const canvas = document.createElement("canvas");
   canvas.width = 1024;
-  canvas.height = 384;
+  canvas.height = 512;
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Digital clock display could not be created.");
 
@@ -179,7 +193,7 @@ function createClockDisplay() {
     const verticalWidth = 25;
     const verticalHeight = 126;
     const left = originX;
-    const top = 35;
+    const top = 155;
 
     drawSegment(left + 22, top, horizontalWidth, horizontalHeight, true, activeSegments.has(0));
     drawSegment(left + 164, top + 18, verticalWidth, verticalHeight, false, activeSegments.has(1));
@@ -196,6 +210,15 @@ function createClockDisplay() {
     context.fillStyle = "#0c0d0d";
     context.fillRect(12, 12, canvas.width - 24, canvas.height - 24);
 
+    context.font = "600 62px 'Courier New', monospace";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillStyle = "#ff174f";
+    context.shadowColor = "#ff003c";
+    context.shadowBlur = 12;
+    context.fillText("93.09.14", canvas.width / 2, 82);
+    context.shadowBlur = 0;
+
     drawDigit(time[0], 70);
     drawDigit(time[1], 276);
     drawDigit(time[3], 566);
@@ -204,8 +227,8 @@ function createClockDisplay() {
     context.fillStyle = "#ff174f";
     context.shadowColor = "#ff003c";
     context.shadowBlur = 18;
-    context.fillRect(497, 132, 25, 25);
-    context.fillRect(497, 229, 25, 25);
+    context.fillRect(497, 252, 25, 25);
+    context.fillRect(497, 349, 25, 25);
     context.shadowBlur = 0;
     texture.needsUpdate = true;
   };
@@ -233,6 +256,7 @@ export function Game() {
   const [status, setStatus] = useState("00:00 · 야간 근무 준비");
   const [reported, setReported] = useState(0);
   const [videoError, setVideoError] = useState(false);
+  const [gameTime, setGameTime] = useState("00:00");
 
   useEffect(() => {
     modeRef.current = mode;
@@ -291,6 +315,7 @@ export function Game() {
   const startGame = useCallback(() => {
     shiftStartRef.current = performance.now();
     gameTimeRef.current = "00:00";
+    setGameTime("00:00");
     setMode("room");
     setStatus("00:00 · 경비실 근무 중");
     scheduleAnomaly();
@@ -303,10 +328,15 @@ export function Game() {
     const updateShiftTime = () => {
       if (shiftStartRef.current === null) return;
       const elapsed = performance.now() - shiftStartRef.current;
-      gameTimeRef.current = formatShiftTime(elapsed);
+      const nextGameTime = formatShiftTime(elapsed);
+      if (gameTimeRef.current !== nextGameTime) {
+        gameTimeRef.current = nextGameTime;
+        setGameTime(nextGameTime);
+      }
 
       if (elapsed >= 360 * 5000) {
         gameTimeRef.current = "06:00";
+        setGameTime("06:00");
         shiftStartRef.current = null;
         modeRef.current = "win";
         setAnomaly(null);
@@ -416,6 +446,43 @@ export function Game() {
     room.add(createBox([0.15, 4, 8], [-4, 1.95, 0], 0x363a35));
     room.add(createBox([0.15, 4, 8], [4, 1.95, 0], 0x363a35));
 
+    const windowGroup = new THREE.Group();
+    let exteriorVideo: HTMLVideoElement | null = null;
+    let exteriorTexture: THREE.VideoTexture | null = null;
+    const windowGlass = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.45, 1.75),
+      new THREE.MeshBasicMaterial({ color: 0x07100d }),
+    );
+    windowGlass.position.set(1.9, 2.16, -2.065);
+
+    if (complexGateVideo) {
+      exteriorVideo = document.createElement("video");
+      exteriorVideo.src = complexGateVideo;
+      exteriorVideo.loop = true;
+      exteriorVideo.muted = true;
+      exteriorVideo.autoplay = true;
+      exteriorVideo.playsInline = true;
+      exteriorVideo.preload = "auto";
+      exteriorTexture = new THREE.VideoTexture(exteriorVideo);
+      exteriorTexture.colorSpace = THREE.SRGBColorSpace;
+      exteriorTexture.minFilter = THREE.LinearFilter;
+      exteriorTexture.magFilter = THREE.LinearFilter;
+      windowGlass.material = new THREE.MeshBasicMaterial({ map: exteriorTexture, toneMapped: false });
+      void exteriorVideo.play().catch(() => undefined);
+    } else {
+      console.warn("[Environment] Missing ComplexGate.mp4 for the front window.");
+    }
+
+    windowGroup.add(windowGlass);
+    const frameColor = 0x171b18;
+    windowGroup.add(createBox([3.75, 0.14, 0.14], [1.9, 3.105, -1.99], frameColor));
+    windowGroup.add(createBox([3.75, 0.14, 0.14], [1.9, 1.215, -1.99], frameColor));
+    windowGroup.add(createBox([0.14, 2.02, 0.14], [0.025, 2.16, -1.99], frameColor));
+    windowGroup.add(createBox([0.14, 2.02, 0.14], [3.775, 2.16, -1.99], frameColor));
+    windowGroup.add(createBox([0.1, 1.89, 0.12], [1.9, 2.16, -1.98], frameColor));
+    windowGroup.add(createBox([3.62, 0.1, 0.12], [1.9, 2.16, -1.98], frameColor));
+    room.add(windowGroup);
+
     const desk = createBox([4.6, 0.18, 1.7], [0, 0.78, 0.05], 0x3b281d);
     room.add(desk);
     room.add(createBox([0.2, 1.55, 0.2], [-2, 0, -0.55], 0x211710));
@@ -464,7 +531,7 @@ export function Game() {
     room.add(label);
 
     const clock = new THREE.Group();
-    const clockBody = createBox([1.3, 0.52, 0.34], [-1.55, 1.16, -0.28], 0x080a09);
+    const clockBody = createBox([1.3, 0.62, 0.34], [-1.55, 1.21, -0.28], 0x080a09);
     clockBody.material = new THREE.MeshStandardMaterial({
       color: 0x070908,
       roughness: 0.34,
@@ -472,7 +539,7 @@ export function Game() {
     });
     clock.add(clockBody);
 
-    const clockBezel = createBox([1.18, 0.4, 0.035], [-1.55, 1.16, -0.095], 0x010202);
+    const clockBezel = createBox([1.18, 0.5, 0.035], [-1.55, 1.21, -0.095], 0x010202);
     clockBezel.material = new THREE.MeshStandardMaterial({
       color: 0x010202,
       roughness: 0.28,
@@ -482,7 +549,7 @@ export function Game() {
 
     const clockDisplay = createClockDisplay();
     const clockFace = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.08, 0.35),
+      new THREE.PlaneGeometry(1.08, 0.45),
       new THREE.MeshStandardMaterial({
         color: 0xffffff,
         map: clockDisplay.texture,
@@ -493,11 +560,11 @@ export function Game() {
         toneMapped: false,
       }),
     );
-    clockFace.position.set(-1.55, 1.16, -0.073);
+    clockFace.position.set(-1.55, 1.21, -0.073);
     clock.add(clockFace);
 
     const clockGlow = new THREE.PointLight(0xff174f, 0.8, 1.15, 2);
-    clockGlow.position.set(-1.55, 1.14, 0.02);
+    clockGlow.position.set(-1.55, 1.19, 0.02);
     clock.add(clockGlow);
     room.add(clock);
 
@@ -588,6 +655,12 @@ export function Game() {
         }
       });
       clockDisplay.texture.dispose();
+      exteriorVideo?.pause();
+      if (exteriorVideo) {
+        exteriorVideo.removeAttribute("src");
+        exteriorVideo.load();
+      }
+      exteriorTexture?.dispose();
       renderer.dispose();
       renderer.domElement.remove();
       if (canvasRef.current === renderer.domElement) canvasRef.current = null;
@@ -680,7 +753,7 @@ export function Game() {
               )}
               <div className="cctv-meta">
                 <span>{currentChannel.code}</span>
-                <span className={anomalyVisible ? "corrupt-time" : ""}>1999-08-13&nbsp;&nbsp;03:33:{String(channel * 7 + 11).padStart(2, "0")}</span>
+                <span className={anomalyVisible ? "corrupt-time" : ""}>1993-09-14&nbsp;&nbsp;{gameTime}</span>
               </div>
               <div className="channel-name">{currentChannel.name}</div>
               <div className="scanlines" />
