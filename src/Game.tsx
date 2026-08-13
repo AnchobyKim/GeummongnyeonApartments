@@ -6,20 +6,26 @@ type Interactable = "monitor" | "notebook" | "alarm";
 
 type Anomaly = {
   channel: number;
+  phase: "hidden" | "warning" | "seen";
   deadline: number;
 };
 
-const videoAssets = import.meta.glob("../cctv/vid/**/*.mp4", {
+const videoAssets = import.meta.glob("../Assets/cctv/vid/**/*.mp4", {
   eager: true,
   query: "?url",
   import: "default",
 }) as Record<string, string>;
 
 const environmentAssets = import.meta.glob([
-  "../ComplexGate.mp4",
-  "../environment/**/*.mp4",
-  "../cctv/vid/**/ComplexGate.mp4",
+  "../Assets/cctv/vid/ComplexGate.mp4",
+  "../Assets/environment/**/*.mp4",
 ], {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
+
+const boardAssets = import.meta.glob("../Assets/board/*.{png,jpg,jpeg,webp}", {
   eager: true,
   query: "?url",
   import: "default",
@@ -77,7 +83,7 @@ const CHANNELS = [
   },
   {
     code: "CH 04",
-    name: "관리동 복도",
+    name: "3층 복도",
     normalVideo: findVideoAsset("corridor", "normal"),
     abnormalVideo: findVideoAsset("corridor", "abnormal"),
   },
@@ -99,7 +105,7 @@ const RULES = [
   "01. 현관 안쪽에 비가 내리면 즉시 이상 현상 신고 버튼을 누르십시오.",
   "02. 엘리베이터 내부에서 혈흔을 발견하면 문이 닫히기 전에 신고하십시오.",
   "03. 비상계단에 사람이 서 있다면 얼굴을 확인하지 말고 신고하십시오.",
-  "04. 관리동 복도의 닫혀 있던 문이 열려 있으면 경비실 밖으로 나가지 마십시오.",
+  "04. 3층 복도의 닫혀 있던 문이 열려 있으면 경비실 밖으로 나가지 마십시오.",
   "05. 놀이터에 등록되지 않은 아이들이 보이면 수를 세지 말고 신고하십시오.",
   "06. 분리수거장의 물건 배치가 달라졌다면 원래 위치로 돌려놓으려 하지 마십시오.",
 ];
@@ -273,10 +279,14 @@ export function Game() {
     nextAnomalyTimer.current = window.setTimeout(() => {
       if (modeRef.current === "title" || modeRef.current === "gameover" || modeRef.current === "win") return;
       const next = Math.floor(Math.random() * CHANNELS.length);
-      const event = { channel: next, deadline: performance.now() + 5000 };
+      const event: Anomaly = {
+        channel: next,
+        phase: "hidden",
+        deadline: performance.now() + 15000,
+      };
+      anomalyRef.current = event;
       setAnomaly(event);
-      setRemaining(5);
-      setStatus("신호 불일치 감지");
+      setRemaining(0);
     }, delay);
   }, []);
 
@@ -285,7 +295,13 @@ export function Game() {
       setStatus("감지된 이상 신호 없음");
       return;
     }
+    if (anomalyRef.current.phase !== "seen") {
+      setStatus("이상 현상을 직접 확인한 뒤 신고하십시오");
+      return;
+    }
+    anomalyRef.current = null;
     setAnomaly(null);
+    setRemaining(0);
     setReported((value) => value + 1);
     setStatus("이상 신호 보고 완료");
     scheduleAnomaly(9000 + Math.random() * 5000);
@@ -305,7 +321,12 @@ export function Game() {
 
   const leaveInteraction = useCallback(() => {
     setMode("room");
-    setStatus("경비실 근무 중");
+    const active = anomalyRef.current;
+    setStatus(active?.phase === "seen"
+      ? "이상 현상 목격 · 5초 내에 신고하십시오"
+      : active?.phase === "warning"
+        ? "CCTV 신호 간섭 발생 · 이상 채널을 확인하십시오"
+        : "경비실 근무 중");
   }, []);
 
   const requestControl = useCallback(() => {
@@ -339,6 +360,7 @@ export function Game() {
         setGameTime("06:00");
         shiftStartRef.current = null;
         modeRef.current = "win";
+        anomalyRef.current = null;
         setAnomaly(null);
         setStatus("06:00 · 야간 근무 종료");
         setMode("win");
@@ -360,15 +382,27 @@ export function Game() {
 
     const tick = window.setInterval(() => {
       const left = Math.max(0, anomaly.deadline - performance.now());
-      setRemaining(left / 1000);
+      if (anomaly.phase !== "hidden") setRemaining(left / 1000);
       if (left <= 0) {
         window.clearInterval(tick);
+        if (anomaly.phase === "hidden") {
+          const warning: Anomaly = {
+            ...anomaly,
+            phase: "warning",
+            deadline: performance.now() + 10000,
+          };
+          anomalyRef.current = warning;
+          setAnomaly(warning);
+          setRemaining(10);
+          setStatus("CCTV 신호 간섭 발생 · 이상 채널을 확인하십시오");
+          return;
+        }
         modeRef.current = "gameover";
         anomalyRef.current = null;
         setAnomaly(null);
         setRemaining(0);
         setMode("gameover");
-        setStatus("보고 시간 초과");
+        setStatus(anomaly.phase === "seen" ? "보고 시간 초과" : "이상 채널 확인 실패");
         document.exitPointerLock?.();
       }
     }, 50);
@@ -377,14 +411,29 @@ export function Game() {
   }, [anomaly]);
 
   useEffect(() => {
+    if (!anomaly || anomaly.phase === "seen" || mode !== "monitor" || channel !== anomaly.channel) return;
+    const witnessed: Anomaly = {
+      ...anomaly,
+      phase: "seen",
+      deadline: performance.now() + 5000,
+    };
+    anomalyRef.current = witnessed;
+    setAnomaly(witnessed);
+    setRemaining(5);
+    setStatus("이상 현상 목격 · 5초 내에 신고하십시오");
+  }, [anomaly, channel, mode]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (modeRef.current === "gameover" || modeRef.current === "win" || modeRef.current === "title") return;
 
-      if (modeRef.current === "monitor" && event.key === "ArrowLeft") {
+      if (modeRef.current === "monitor" && event.code === "KeyA") {
+        event.preventDefault();
         setChannel((value) => (value + CHANNELS.length - 1) % CHANNELS.length);
         return;
       }
-      if (modeRef.current === "monitor" && event.key === "ArrowRight") {
+      if (modeRef.current === "monitor" && event.code === "KeyD") {
+        event.preventDefault();
         setChannel((value) => (value + 1) % CHANNELS.length);
         return;
       }
@@ -437,7 +486,7 @@ export function Game() {
     scene.add(ceilingLight);
 
     const monitorLight = new THREE.PointLight(0x89baa4, 5, 3, 2);
-    monitorLight.position.set(0, 1.55, 0.7);
+    monitorLight.position.set(1.25, 1.55, 0.7);
     scene.add(monitorLight);
 
     const room = new THREE.Group();
@@ -446,14 +495,40 @@ export function Game() {
     room.add(createBox([0.15, 4, 8], [-4, 1.95, 0], 0x363a35));
     room.add(createBox([0.15, 4, 8], [4, 1.95, 0], 0x363a35));
 
+    const boardTextures: THREE.Texture[] = [];
+    const noticeBoard = new THREE.Group();
+    noticeBoard.add(createBox([0.13, 1.55, 3.45], [-3.88, 2.02, -0.3], 0x5b4029));
+    noticeBoard.add(createBox([0.18, 0.1, 3.65], [-3.78, 2.82, -0.3], 0x241a12));
+    noticeBoard.add(createBox([0.18, 0.1, 3.65], [-3.78, 1.22, -0.3], 0x241a12));
+    noticeBoard.add(createBox([0.18, 1.7, 0.1], [-3.78, 2.02, -2.1], 0x241a12));
+    noticeBoard.add(createBox([0.18, 1.7, 0.1], [-3.78, 2.02, 1.5], 0x241a12));
+
+    const textureLoader = new THREE.TextureLoader();
+    Object.values(boardAssets).sort().forEach((url, index) => {
+      const texture = textureLoader.load(url);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      boardTextures.push(texture);
+      const paper = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.72, 0.48),
+        new THREE.MeshBasicMaterial({ map: texture, toneMapped: false }),
+      );
+      const column = index % 4;
+      const row = Math.floor(index / 4);
+      paper.position.set(-3.805, 2.36 - row * 0.69, -1.56 + column * 0.84);
+      paper.rotation.y = Math.PI / 2;
+      noticeBoard.add(paper);
+    });
+    room.add(noticeBoard);
+
     const windowGroup = new THREE.Group();
     let exteriorVideo: HTMLVideoElement | null = null;
     let exteriorTexture: THREE.VideoTexture | null = null;
     const windowGlass = new THREE.Mesh(
-      new THREE.PlaneGeometry(3.45, 1.75),
+      new THREE.PlaneGeometry(3.84, 2.88),
       new THREE.MeshBasicMaterial({ color: 0x07100d }),
     );
-    windowGlass.position.set(1.9, 2.16, -2.065);
+    windowGlass.position.set(0, 2.34, -2.065);
 
     if (complexGateVideo) {
       exteriorVideo = document.createElement("video");
@@ -475,12 +550,12 @@ export function Game() {
 
     windowGroup.add(windowGlass);
     const frameColor = 0x171b18;
-    windowGroup.add(createBox([3.75, 0.14, 0.14], [1.9, 3.105, -1.99], frameColor));
-    windowGroup.add(createBox([3.75, 0.14, 0.14], [1.9, 1.215, -1.99], frameColor));
-    windowGroup.add(createBox([0.14, 2.02, 0.14], [0.025, 2.16, -1.99], frameColor));
-    windowGroup.add(createBox([0.14, 2.02, 0.14], [3.775, 2.16, -1.99], frameColor));
-    windowGroup.add(createBox([0.1, 1.89, 0.12], [1.9, 2.16, -1.98], frameColor));
-    windowGroup.add(createBox([3.62, 0.1, 0.12], [1.9, 2.16, -1.98], frameColor));
+    windowGroup.add(createBox([4.12, 0.14, 0.14], [0, 3.85, -1.99], frameColor));
+    windowGroup.add(createBox([4.12, 0.14, 0.14], [0, 0.83, -1.99], frameColor));
+    windowGroup.add(createBox([0.14, 3.16, 0.14], [-1.99, 2.34, -1.99], frameColor));
+    windowGroup.add(createBox([0.14, 3.16, 0.14], [1.99, 2.34, -1.99], frameColor));
+    windowGroup.add(createBox([0.1, 3.02, 0.12], [0, 2.34, -1.98], frameColor));
+    windowGroup.add(createBox([3.98, 0.1, 0.12], [0, 2.34, -1.98], frameColor));
     room.add(windowGroup);
 
     const desk = createBox([4.6, 0.18, 1.7], [0, 0.78, 0.05], 0x3b281d);
@@ -488,9 +563,12 @@ export function Game() {
     room.add(createBox([0.2, 1.55, 0.2], [-2, 0, -0.55], 0x211710));
     room.add(createBox([0.2, 1.55, 0.2], [2, 0, -0.55], 0x211710));
 
+    const monitorGroup = new THREE.Group();
+    monitorGroup.position.set(1.35, 0, 0);
+    monitorGroup.rotation.y = -0.36;
     const monitorBody = createBox([1.82, 1.36, 0.85], [0, 1.53, -0.02], 0x242723);
     monitorBody.userData.interactable = "monitor" satisfies Interactable;
-    room.add(monitorBody);
+    monitorGroup.add(monitorBody);
     const screen = createBox([1.5, 1.02, 0.04], [0, 1.57, 0.42], 0x193126);
     screen.material = new THREE.MeshStandardMaterial({
       color: 0x183126,
@@ -499,8 +577,9 @@ export function Game() {
       roughness: 0.35,
     });
     screen.userData.interactable = "monitor" satisfies Interactable;
-    room.add(screen);
-    room.add(createBox([0.58, 0.15, 0.45], [0, 0.91, -0.02], 0x242723));
+    monitorGroup.add(screen);
+    monitorGroup.add(createBox([0.58, 0.15, 0.45], [0, 0.91, -0.02], 0x242723));
+    room.add(monitorGroup);
 
     const notebook = createBox([0.85, 0.07, 1.12], [-1.28, 0.94, 0.45], 0xd3c9a0);
     notebook.rotation.y = -0.18;
@@ -511,22 +590,26 @@ export function Game() {
     noteBand.userData.interactable = "notebook" satisfies Interactable;
     room.add(noteBand);
 
+    const drawer = createBox([1.35, 0.3, 1.05], [1.35, 0.57, 0.82], 0x302218);
+    room.add(drawer);
+    room.add(createBox([0.72, 0.07, 0.06], [1.35, 0.57, 1.37], 0x11120f));
+
     const alarmBase = new THREE.Mesh(
       new THREE.CylinderGeometry(0.33, 0.38, 0.18, 32),
       new THREE.MeshStandardMaterial({ color: 0x1e211d, roughness: 0.7 }),
     );
-    alarmBase.position.set(1.35, 0.96, 0.43);
+    alarmBase.position.set(1.35, 0.78, 1.02);
     alarmBase.userData.interactable = "alarm" satisfies Interactable;
     room.add(alarmBase);
     const alarmButton = new THREE.Mesh(
       new THREE.CylinderGeometry(0.23, 0.26, 0.16, 32),
       new THREE.MeshStandardMaterial({ color: 0x6d160f, emissive: 0x2c0300, emissiveIntensity: 0.7 }),
     );
-    alarmButton.position.set(1.35, 1.12, 0.43);
+    alarmButton.position.set(1.35, 0.92, 1.02);
     alarmButton.userData.interactable = "alarm" satisfies Interactable;
     room.add(alarmButton);
 
-    const label = createBox([1.1, 0.04, 0.36], [1.35, 0.9, 0.87], 0xd2c8a1);
+    const label = createBox([0.82, 0.035, 0.25], [1.35, 0.74, 0.48], 0xd2c8a1);
     label.userData.interactable = "alarm" satisfies Interactable;
     room.add(label);
 
@@ -593,7 +676,12 @@ export function Game() {
       setLocked(isLocked);
       if (!isLocked && (modeRef.current === "monitor" || modeRef.current === "notebook")) {
         setMode("room");
-        setStatus("경비실 근무 중");
+        const active = anomalyRef.current;
+        setStatus(active?.phase === "seen"
+          ? "이상 현상 목격 · 5초 내에 신고하십시오"
+          : active?.phase === "warning"
+            ? "CCTV 신호 간섭 발생 · 이상 채널을 확인하십시오"
+            : "경비실 근무 중");
       }
     };
 
@@ -615,7 +703,7 @@ export function Game() {
       }
 
       raycaster.setFromCamera(pointer, camera);
-      const hit = raycaster.intersectObjects(room.children, false).find((entry) => entry.object.userData.interactable);
+      const hit = raycaster.intersectObjects(room.children, true).find((entry) => entry.object.userData.interactable);
       const hitObject = hit?.object ?? null;
       const nextHover = (hitObject?.userData.interactable as Interactable | undefined) ?? null;
       if (nextHover !== hoveredRef.current) {
@@ -655,6 +743,7 @@ export function Game() {
         }
       });
       clockDisplay.texture.dispose();
+      boardTextures.forEach((texture) => texture.dispose());
       exteriorVideo?.pause();
       if (exteriorVideo) {
         exteriorVideo.removeAttribute("src");
@@ -681,6 +770,7 @@ export function Game() {
 
   const currentChannel = CHANNELS[channel];
   const anomalyVisible = anomaly?.channel === channel;
+  const warningInterference = anomaly?.phase === "warning";
   const currentVideo = anomalyVisible ? currentChannel.abnormalVideo : currentChannel.normalVideo;
 
   useEffect(() => {
@@ -705,9 +795,9 @@ export function Game() {
           {mode === "room" && !locked && (
             <button className="resume-control" onClick={requestControl}>화면을 클릭하여 시점 조작</button>
           )}
-          {anomaly && (
+          {anomaly && anomaly.phase !== "hidden" && (
             <div className="anomaly-timer" role="alert">
-              응답 제한 <strong>{remaining.toFixed(1)}</strong>
+              {anomaly.phase === "warning" ? "채널 확인 제한" : "신고 제한"} <strong>{remaining.toFixed(1)}</strong>
             </div>
           )}
         </>
@@ -721,17 +811,17 @@ export function Game() {
           <p className="shift-copy">야간 경비 근무 기록 · 00:00—06:00</p>
           <div className="briefing">
             <p>마우스로 시선을 움직이고 화면 중앙의 점을 사물에 맞추십시오.</p>
-            <p><kbd>F</kbd> 상호작용 · <kbd>←</kbd><kbd>→</kbd> 채널 이동 · <kbd>ESC</kbd> 종료</p>
+            <p><kbd>F</kbd> 상호작용 · <kbd>A</kbd><kbd>D</kbd> 채널 이동 · <kbd>ESC</kbd> 종료</p>
           </div>
           <button className="primary-action" onClick={startGame}>야간 근무 시작</button>
-          <p className="build-label">PROTOTYPE RECORD 1999-08</p>
+          <p className="build-label">PROTOTYPE RECORD 1993-09</p>
         </section>
       )}
 
       {mode === "monitor" && (
         <section className="device-overlay monitor-overlay" aria-label="CCTV 모니터">
           <div className="crt-frame">
-            <div className={`cctv-feed ${anomalyVisible ? "has-anomaly" : ""}`}>
+            <div className={`cctv-feed ${anomalyVisible ? "has-anomaly" : ""} ${warningInterference ? "has-interference" : ""}`}>
               {currentVideo && !videoError ? (
                 <video
                   key={currentVideo}
@@ -758,11 +848,12 @@ export function Game() {
               <div className="channel-name">{currentChannel.name}</div>
               <div className="scanlines" />
               <div className="tracking-bar" />
+              {warningInterference && <div className="signal-interference" aria-hidden="true" />}
             </div>
             <div className="monitor-controls">
-              <button aria-label="이전 CCTV 채널" onClick={() => setChannel((value) => (value + 5) % 6)}>←</button>
+              <button aria-label="이전 CCTV 채널" onClick={() => setChannel((value) => (value + 5) % 6)}>A</button>
               <span>{channel + 1} / 6</span>
-              <button aria-label="다음 CCTV 채널" onClick={() => setChannel((value) => (value + 1) % 6)}>→</button>
+              <button aria-label="다음 CCTV 채널" onClick={() => setChannel((value) => (value + 1) % 6)}>D</button>
             </div>
           </div>
           <p className="exit-hint"><kbd>F</kbd> 또는 <kbd>ESC</kbd> 모니터에서 물러나기</p>

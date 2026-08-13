@@ -401,6 +401,24 @@ kbd {
   animation: signal-break 130ms steps(2, end) infinite;
 }
 
+.has-interference {
+  animation: warning-signal-break 90ms steps(2, end) infinite;
+}
+
+.signal-interference {
+  position: absolute;
+  inset: -12%;
+  z-index: 9;
+  pointer-events: none;
+  opacity: 0.78;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 5px, rgba(235, 244, 229, 0.34) 6px, #07100c 8px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0 2px, rgba(0, 0, 0, 0.72) 3px 7px);
+  background-size: 100% 17px, 23px 100%;
+  mix-blend-mode: screen;
+  animation: interference-sweep 110ms steps(3, end) infinite;
+}
+
 .cctv-meta,
 .channel-name {
   position: absolute;
@@ -601,6 +619,18 @@ kbd {
 
 @keyframes signal-break {
   50% { filter: grayscale(1) contrast(1.7) brightness(0.72); transform: translateX(1px); }
+}
+
+@keyframes warning-signal-break {
+  0% { filter: grayscale(1) contrast(2.4) brightness(0.45); transform: translate(-5px, 2px) scale(1.02); }
+  50% { filter: grayscale(1) contrast(3.2) brightness(1.25); transform: translate(6px, -3px) scale(1.04); }
+  100% { filter: grayscale(1) contrast(2.1) brightness(0.6); transform: translate(-2px, 4px) scale(1.03); }
+}
+
+@keyframes interference-sweep {
+  0% { transform: translate(-3%, -2%); background-position: 0 0, 0 0; }
+  50% { transform: translate(4%, 3%); background-position: 0 31px, 47px 0; opacity: 0.95; }
+  100% { transform: translate(-1%, 1%); background-position: 0 -19px, -29px 0; }
 }
 
 @keyframes corrupt-text {

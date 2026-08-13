@@ -180,7 +180,7 @@ CCTV/경비실 관찰
 | 화면 중앙 Dot | 현재 상호작용 대상을 조준한다. |
 | F | Dot이 가리키는 모니터, 노트, 신고 버튼과 상호작용하거나 현재 상호작용을 끝낸다. |
 | Esc | 모니터 또는 노트 상호작용을 끝낸다. |
-| 좌/우 방향키 | 모니터 사용 중 6개 CCTV 채널을 순환한다. |
+| A / D | 모니터 사용 중 6개 CCTV 채널을 순환한다. |
 
 모든 필수 행동은 마우스만으로도 가능하게 하며, 키보드는 단축키로 제공한다.
 
@@ -294,7 +294,7 @@ CCTV/경비실 관찰
 ### 첫 플레이어블 (`Prototype default`)
 
 - 경비실 1개
-- CCTV 채널 6개: 101동 현관, 엘리베이터, 비상계단, 관리동 복도, 놀이터, 분리수거장
+- CCTV 채널 6개: 101동 현관, 엘리베이터, 비상계단, 3층 복도, 놀이터, 분리수거장
 - 정상 MP4 루프 6개와 이상 MP4 루프 6개 (`Temporary Placeholder`)
 - 이상 현상 6개
 - 원본 근무 수칙 5개
@@ -340,7 +340,7 @@ CCTV/경비실 관찰
 
 | ID | 요구사항 | 상태 |
 | --- | --- | --- |
-| REQ-OBS-001 | 플레이어는 모니터 사용 중 좌/우 방향키로 6개의 CCTV 채널을 순환할 수 있어야 한다. | Implemented |
+| REQ-OBS-001 | 플레이어는 모니터 사용 중 A/D 키로 6개의 CCTV 채널을 순환할 수 있어야 한다. | Implemented |
 | REQ-OBS-002 | 각 채널은 정상 또는 이상 상태의 시각·음향 자산을 재생할 수 있어야 한다. | Implemented |
 | REQ-OBS-003 | 활성 이상 현상은 정의된 시작·종료 조건을 가져야 한다. | Implemented |
 | REQ-OBS-004 | 제작용 CCTV 재생 세트는 시작·끝 프레임이 일치하는 1~2초 클립 4개를 가지며, 재생기는 이를 무작위로 끊김 없이 연속 재생해야 한다. | Planned |
@@ -391,14 +391,16 @@ CCTV/경비실 관찰
 | REQ-INT-001 | 플레이어는 책상 앞의 고정 위치에서 마우스로 1인칭 시점을 회전할 수 있어야 한다. | Implemented |
 | REQ-INT-002 | 화면 중앙 Dot이 모니터, 노트, 신고 버튼을 가리킬 때 대상 안내가 표시되어야 한다. | Implemented |
 | REQ-INT-003 | 플레이어는 F키로 조준한 대상과 상호작용하고 F 또는 Esc로 모니터와 노트를 닫을 수 있어야 한다. | Implemented |
-| REQ-INT-004 | 이상 현상 발생 후 5초 안에 신고 버튼을 누르지 않으면 게임 오버되어야 한다. | Implemented |
+| REQ-INT-004 | 이상 현상 발생 후 15초 동안 발견되지 않으면 현재 CCTV에 별도 신호 간섭을 표시하고, 이후 10초 안에 이상 채널을 확인하지 못하면 게임 오버되어야 한다. | Implemented |
+| REQ-INT-005 | 이상 채널을 직접 확인한 순간부터 5초 안에 신고해야 하며, 확인 전 신고는 성공으로 처리하지 않아야 한다. | Implemented |
 
 | ID | 작업 | 관련 요구사항 | 상태 |
 | --- | --- | --- | --- |
 | TASK-INT-001 | 제한 회전 1인칭 카메라와 Pointer Lock 입력 구현 | REQ-INT-001 | Implemented |
 | TASK-INT-002 | 중앙 Raycast와 상호작용 대상 피드백 구현 | REQ-INT-002 | Implemented |
 | TASK-INT-003 | 모니터·노트·신고 버튼 상호작용 상태 구현 | REQ-INT-003 | Implemented |
-| TASK-INT-004 | 이상 현상 5초 제한 및 게임 오버 처리 구현 | REQ-INT-004 | Implemented |
+| TASK-INT-004 | 15초 탐색 유예, 10초 간섭 경고 및 미확인 게임 오버 상태 구현 | REQ-INT-004 | Implemented |
+| TASK-INT-005 | 이상 채널 목격 상태와 5초 신고 제한 판정 구현 | REQ-INT-005 | Implemented |
 
 ### FEAT-TIME-001: 3D 디지털 근무 시계
 
@@ -406,11 +408,13 @@ CCTV/경비실 관찰
 | --- | --- | --- |
 | REQ-TIME-001 | 책상 위에는 검은 본체, 검은 전면 패널, 붉은 4자리 7세그먼트 LED와 콜론으로 구성된 3D 디지털 시계가 있어야 한다. | Implemented |
 | REQ-TIME-002 | 근무 시작 시 시계는 00:00을 표시하고, 현실 시간 5초마다 게임 시간이 1분 증가해야 한다. | Implemented |
+| REQ-TIME-003 | 시계에는 시간보다 작은 `93.09.14` 날짜를 표시하고 CCTV 타임코드도 같은 날짜와 게임 분 단위 시간에 동기화되어야 한다. | Implemented |
 
 | ID | 작업 | 관련 요구사항 | 상태 |
 | --- | --- | --- | --- |
 | TASK-TIME-001 | 디지털 시계 본체, 베젤, 발광 표시판을 3D 책상 오브젝트로 구현 | REQ-TIME-001 | Implemented |
 | TASK-TIME-002 | CanvasTexture 기반 7세그먼트 렌더러와 5초/1분 게임 시계 연결 | REQ-TIME-002 | Implemented |
+| TASK-TIME-003 | 디지털 시계 날짜와 CCTV 타임코드를 공통 게임 시간에 연결 | REQ-TIME-003 | Implemented |
 
 ### FEAT-AV-001: 아날로그 영상·음향 연출
 
@@ -450,10 +454,14 @@ CCTV/경비실 관찰
 | AC-INT-001 | REQ-INT-001 | 플레이어가 경비실의 책상 앞에 앉아 있다. | Pointer Lock 상태에서 마우스를 움직인다. | 시점이 정의된 상하좌우 각도 안에서 회전한다. | Not tested |
 | AC-INT-002 | REQ-INT-002 | 상호작용 가능한 사물이 시야에 있다. | 중앙 Dot을 사물 위에 놓는다. | Dot과 대상 안내가 상호작용 가능 상태로 변한다. | Not tested |
 | AC-INT-003 | REQ-INT-003 | Dot이 모니터 또는 노트를 가리킨다. | F를 누른 뒤 다시 F 또는 Esc를 누른다. | 해당 화면이 열렸다가 경비실 시점으로 돌아온다. | Not tested |
-| AC-INT-004 | REQ-INT-004 | 이상 현상이 활성화되어 있다. | 5초 동안 신고 버튼을 누르지 않는다. | 게임 오버 화면으로 전환된다. | Not tested |
-| AC-INT-005 | REQ-INT-004 | 이상 현상이 활성화되어 있다. | 5초 안에 신고 버튼을 조준하고 F를 누른다. | 이상 현상이 해제되고 다음 사건이 예약된다. | Not tested |
+| AC-INT-004 | REQ-INT-004 | 이상 현상이 활성화되었지만 목표 채널을 확인하지 않았다. | 15초가 경과한다. | 현재 CCTV에 별도 신호 간섭이 시작되고 10초 확인 제한이 표시된다. | Not tested |
+| AC-INT-005 | REQ-INT-004 | 신호 간섭 경고가 시작되었고 목표 채널을 확인하지 않았다. | 10초가 경과한다. | 게임 오버 화면으로 전환된다. | Not tested |
+| AC-INT-006 | REQ-INT-005 | 이상 현상이 활성화되어 있으나 목표 채널을 보지 않았다. | 신고 버튼을 조준하고 F를 누른다. | 신고가 성공하지 않고 이상 현상이 유지된다. | Not tested |
+| AC-INT-007 | REQ-INT-005 | 플레이어가 이상 채널을 직접 확인했다. | 5초 안에 신고 버튼을 조준하고 F를 누른다. | 이상 현상이 해제되고 다음 사건이 예약된다. | Not tested |
+| AC-INT-008 | REQ-INT-005 | 플레이어가 이상 채널을 직접 확인했다. | 신고하지 않은 채 5초가 경과한다. | 게임 오버 화면으로 전환된다. | Not tested |
 | AC-TIME-001 | REQ-TIME-001 | 경비실 3D 장면이 표시되어 있다. | 플레이어가 모니터 왼쪽 책상 위를 바라본다. | 검은 본체와 붉은 7세그먼트 표시판을 가진 디지털 시계가 보인다. | Not tested |
 | AC-TIME-002 | REQ-TIME-002 | 근무를 시작해 시계가 00:00을 표시한다. | 현실 시간 10초가 경과한다. | 시계가 00:02를 표시한다. | Not tested |
+| AC-TIME-003 | REQ-TIME-003 | 근무가 진행 중이다. | 게임 시간이 다음 분으로 바뀐다. | 시계는 `93.09.14`와 새 시간을 표시하고 CCTV 타임코드도 `1993-09-14`와 같은 시간으로 갱신된다. | Not tested |
 
 ---
 
@@ -537,15 +545,15 @@ CCTV/경비실 관찰
 - 문서 검증 수준: `Static Analysis`
 - 구현 검증 수준: `Compile Verified` (TypeScript 검사 및 정적 프로덕션 빌드 성공)
 - 신뢰도: `Medium` — 정적 빌드와 HTTP 응답은 확인했으나 실제 브라우저 조작 검증은 남아 있음
-- 다음 권장 작업: Pointer Lock, F/Esc, 6채널 전환, 5초 신고 제한을 실제 브라우저에서 플레이 검증
+- 다음 권장 작업: Pointer Lock, F/Esc, A/D 6채널 전환, 15초 탐색·10초 간섭·5초 신고 단계를 실제 브라우저에서 플레이 검증
 
 ### 구현 추적
 
 | 기능 | 요구사항 | 구현 대상 | 검증 |
 | --- | --- | --- | --- |
-| FEAT-INT-001 | REQ-INT-001~004 | `src/Game.tsx`, `src/styles.css` | Compile Verified / Runtime not tested |
-| FEAT-TIME-001 | REQ-TIME-001~002 | `src/Game.tsx` | Compile Verified / Runtime not tested |
-| FEAT-OBS-001 | REQ-OBS-001~006 | `src/Game.tsx`, `cctv/vid/normal`, `cctv/vid/abnormal` | Compile Verified / Runtime not tested |
+| FEAT-INT-001 | REQ-INT-001~005 | `src/Game.tsx`, `src/styles.css` | Compile Verified / Runtime not tested |
+| FEAT-TIME-001 | REQ-TIME-001~003 | `src/Game.tsx` | Compile Verified / Runtime not tested |
+| FEAT-OBS-001 | REQ-OBS-001~006 | `src/Game.tsx`, `Assets/cctv/vid/normal`, `Assets/cctv/vid/abnormal` | Compile Verified / Runtime not tested |
 | FEAT-SURV-001 | REQ-SURV-001 | `src/Game.tsx`, `src/styles.css` | Compile Verified / 30-minute runtime not tested |
 | FEAT-AV-001 | REQ-AV-001 | `src/styles.css` | Compile Verified / Visual QA not tested |
 | GitHub Pages 배포 | 정적 하위 경로 빌드 | `vite.config.ts`, `.github/workflows/deploy-pages.yml` | Local build verified / Remote deploy not tested |
