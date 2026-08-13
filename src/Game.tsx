@@ -252,6 +252,7 @@ export function Game() {
   const nextAnomalyTimer = useRef<number | null>(null);
   const shiftStartRef = useRef<number | null>(null);
   const gameTimeRef = useRef("00:00");
+  const alarmPressStartedRef = useRef<number | null>(null);
 
   const [mode, setMode] = useState<Mode>("title");
   const [hovered, setHovered] = useState<Interactable | null>(null);
@@ -291,6 +292,7 @@ export function Game() {
   }, []);
 
   const resolveAlarm = useCallback(() => {
+    alarmPressStartedRef.current = performance.now();
     if (!anomalyRef.current) {
       setStatus("감지된 이상 신호 없음");
       return;
@@ -481,7 +483,7 @@ export function Game() {
 
     scene.add(new THREE.HemisphereLight(0x748275, 0x10110f, 0.55));
     const ceilingLight = new THREE.PointLight(0xd8d4b7, 18, 9, 2);
-    ceilingLight.position.set(0, 3.1, 1.2);
+    ceilingLight.position.set(0, 3.72, 0.8);
     ceilingLight.castShadow = true;
     scene.add(ceilingLight);
 
@@ -492,27 +494,56 @@ export function Game() {
     const room = new THREE.Group();
     room.add(createBox([8, 0.15, 8], [0, -0.05, 0], 0x242824));
     room.add(createBox([8, 4, 0.15], [0, 1.95, -2.15], 0x56594e));
+    room.add(createBox([8, 4, 0.15], [0, 1.95, 4], 0x454943));
     room.add(createBox([0.15, 4, 8], [-4, 1.95, 0], 0x363a35));
     room.add(createBox([0.15, 4, 8], [4, 1.95, 0], 0x363a35));
 
+    const ceilingFixture = createBox([1.65, 0.09, 0.48], [0, 3.86, 0.8], 0xe1ddc2);
+    const ceilingFixtureMaterial = new THREE.MeshStandardMaterial({
+      color: 0xc9c7b5,
+      emissive: 0xe7e3c9,
+      emissiveIntensity: 1.15,
+      roughness: 0.42,
+    });
+    ceilingFixture.material = ceilingFixtureMaterial;
+    room.add(ceilingFixture);
+
+    const rearDoor = new THREE.Group();
+    rearDoor.add(createBox([1.55, 2.75, 0.12], [0, 1.38, 3.89], 0x302c25));
+    rearDoor.add(createBox([1.78, 0.13, 0.18], [0, 2.82, 3.8], 0x181713));
+    rearDoor.add(createBox([0.13, 2.95, 0.18], [-0.84, 1.42, 3.8], 0x181713));
+    rearDoor.add(createBox([0.13, 2.95, 0.18], [0.84, 1.42, 3.8], 0x181713));
+    const doorKnob = new THREE.Mesh(
+      new THREE.SphereGeometry(0.09, 18, 12),
+      new THREE.MeshStandardMaterial({ color: 0x8b7650, metalness: 0.75, roughness: 0.28 }),
+    );
+    doorKnob.position.set(0.55, 1.35, 3.76);
+    rearDoor.add(doorKnob);
+    room.add(rearDoor);
+
     const boardTextures: THREE.Texture[] = [];
     const noticeBoard = new THREE.Group();
-    noticeBoard.add(createBox([0.13, 1.55, 3.45], [-3.88, 2.02, -0.3], 0x5b4029));
-    noticeBoard.add(createBox([0.18, 0.1, 3.65], [-3.78, 2.82, -0.3], 0x241a12));
-    noticeBoard.add(createBox([0.18, 0.1, 3.65], [-3.78, 1.22, -0.3], 0x241a12));
-    noticeBoard.add(createBox([0.18, 1.7, 0.1], [-3.78, 2.02, -2.1], 0x241a12));
-    noticeBoard.add(createBox([0.18, 1.7, 0.1], [-3.78, 2.02, 1.5], 0x241a12));
+    noticeBoard.add(createBox([0.13, 1.085, 3.45], [-3.88, 2.02, -0.3], 0x5b4029));
+    noticeBoard.add(createBox([0.18, 0.1, 3.65], [-3.78, 2.63, -0.3], 0x241a12));
+    noticeBoard.add(createBox([0.18, 0.1, 3.65], [-3.78, 1.41, -0.3], 0x241a12));
+    noticeBoard.add(createBox([0.18, 1.23, 0.1], [-3.78, 2.02, -2.1], 0x241a12));
+    noticeBoard.add(createBox([0.18, 1.23, 0.1], [-3.78, 2.02, 1.5], 0x241a12));
 
     const textureLoader = new THREE.TextureLoader();
     Object.values(boardAssets).sort().forEach((url, index) => {
-      const paperMaterial = new THREE.MeshBasicMaterial({ toneMapped: false });
+      const paperMaterial = new THREE.MeshBasicMaterial({
+        toneMapped: false,
+        transparent: true,
+        alphaTest: 0.02,
+        side: THREE.DoubleSide,
+      });
       const paper = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), paperMaterial);
-      paper.scale.set(0.52, 0.52, 1);
+      paper.scale.set(0.78, 0.78, 1);
       const texture = textureLoader.load(url, (loadedTexture) => {
         const image = loadedTexture.image as HTMLImageElement;
         const aspect = image.naturalWidth / image.naturalHeight;
-        const maxWidth = 0.72;
-        const maxHeight = 0.56;
+        const maxWidth = 1.08;
+        const maxHeight = 0.84;
         const width = Math.min(maxWidth, maxHeight * aspect);
         paper.scale.set(width, width / aspect, 1);
       });
@@ -522,7 +553,7 @@ export function Game() {
       boardTextures.push(texture);
       const column = index % 4;
       const row = Math.floor(index / 4);
-      paper.position.set(-3.805, 2.36 - row * 0.69, -1.56 + column * 0.84);
+      paper.position.set(-3.805, 2.28 - row * 0.52, -1.56 + column * 0.84);
       paper.rotation.y = Math.PI / 2;
       noticeBoard.add(paper);
     });
@@ -594,6 +625,68 @@ export function Game() {
     monitorGroup.add(screen);
     monitorGroup.add(createBox([0.58, 0.15, 0.45], [0, 0.91, -0.02], 0x242723));
     room.add(monitorGroup);
+
+    const fan = new THREE.Group();
+    fan.position.set(2.42, 0, 0.12);
+    const fanBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.32, 0.38, 0.1, 28),
+      new THREE.MeshStandardMaterial({ color: 0x303732, metalness: 0.25, roughness: 0.58 }),
+    );
+    fanBase.position.y = 0.94;
+    fan.add(fanBase);
+    const fanStem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.045, 0.055, 0.58, 16),
+      new THREE.MeshStandardMaterial({ color: 0x3b433d, metalness: 0.45, roughness: 0.48 }),
+    );
+    fanStem.position.y = 1.23;
+    fan.add(fanStem);
+
+    const fanHead = new THREE.Group();
+    fanHead.position.y = 1.58;
+    const fanMotor = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.13, 0.13, 0.32, 20),
+      new THREE.MeshStandardMaterial({ color: 0x252b27, metalness: 0.25, roughness: 0.62 }),
+    );
+    fanMotor.rotation.x = Math.PI / 2;
+    fanHead.add(fanMotor);
+
+    const cageMaterial = new THREE.MeshStandardMaterial({ color: 0x565f58, metalness: 0.7, roughness: 0.34 });
+    const cage = new THREE.Mesh(new THREE.TorusGeometry(0.39, 0.018, 8, 42), cageMaterial);
+    cage.position.z = 0.16;
+    fanHead.add(cage);
+    for (let spokeIndex = 0; spokeIndex < 8; spokeIndex += 1) {
+      const spoke = createBox([0.72, 0.012, 0.012], [0, 0, 0.16], 0x565f58);
+      spoke.rotation.z = (Math.PI / 4) * spokeIndex;
+      fanHead.add(spoke);
+    }
+
+    const fanRotor = new THREE.Group();
+    fanRotor.position.z = 0.12;
+    const bladeMaterial = new THREE.MeshStandardMaterial({
+      color: 0x78847b,
+      metalness: 0.15,
+      roughness: 0.5,
+      side: THREE.DoubleSide,
+    });
+    for (let bladeIndex = 0; bladeIndex < 4; bladeIndex += 1) {
+      const blade = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.11, 0.025), bladeMaterial);
+      blade.position.x = 0.18;
+      blade.rotation.z = 0.28;
+      const bladeArm = new THREE.Group();
+      bladeArm.rotation.z = (Math.PI / 2) * bladeIndex;
+      bladeArm.add(blade);
+      fanRotor.add(bladeArm);
+    }
+    const fanHub = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.075, 0.075, 0.09, 18),
+      new THREE.MeshStandardMaterial({ color: 0x303833, metalness: 0.4, roughness: 0.42 }),
+    );
+    fanHub.rotation.x = Math.PI / 2;
+    fanHub.position.z = 0.03;
+    fanRotor.add(fanHub);
+    fanHead.add(fanRotor);
+    fan.add(fanHead);
+    room.add(fan);
 
     const notebook = createBox([0.85, 0.07, 1.12], [-1.28, 0.94, 0.45], 0xd3c9a0);
     notebook.rotation.y = -0.18;
@@ -674,12 +767,15 @@ export function Game() {
     let animationFrame = 0;
     let previousHover: THREE.Object3D | null = null;
     let displayedClockTime = "00:00";
+    let previousAnimationTime = performance.now();
+    let nextLightFlicker = previousAnimationTime + 8000 + Math.random() * 12000;
+    let lightFlickerEnds = 0;
 
     const onMouseMove = (event: MouseEvent) => {
       if (document.pointerLockElement !== renderer.domElement || modeRef.current !== "room") return;
       yaw -= event.movementX * 0.0018;
       pitch -= event.movementY * 0.0018;
-      yaw = THREE.MathUtils.clamp(yaw, -1.18, 1.18);
+      yaw = THREE.MathUtils.clamp(yaw, -3.05, 3.05);
       pitch = THREE.MathUtils.clamp(pitch, -0.63, 0.42);
       camera.rotation.y = yaw;
       camera.rotation.x = pitch;
@@ -707,9 +803,33 @@ export function Game() {
 
     const animate = () => {
       animationFrame = requestAnimationFrame(animate);
-      const t = performance.now() * 0.001;
-      ceilingLight.intensity = 17.3 + Math.sin(t * 17) * 0.35;
+      const now = performance.now();
+      const deltaSeconds = Math.min(0.05, (now - previousAnimationTime) / 1000);
+      previousAnimationTime = now;
+      const t = now * 0.001;
+
+      if (now >= nextLightFlicker) {
+        lightFlickerEnds = now + 90 + Math.random() * 130;
+        nextLightFlicker = now + 9000 + Math.random() * 15000;
+      }
+      const lightIsFlickering = now < lightFlickerEnds;
+      ceilingLight.intensity = lightIsFlickering && Math.floor(now / 45) % 2 === 0 ? 1.4 : 17.5;
+      ceilingFixtureMaterial.emissiveIntensity = lightIsFlickering && Math.floor(now / 45) % 2 === 0 ? 0.08 : 1.15;
       monitorLight.intensity = 4.8 + Math.sin(t * 4.3) * 0.35;
+      fanRotor.rotation.z -= deltaSeconds * 22;
+      fanHead.rotation.y = Math.sin(t * 0.55) * 0.32;
+
+      const alarmPressElapsed = alarmPressStartedRef.current === null
+        ? Number.POSITIVE_INFINITY
+        : now - alarmPressStartedRef.current;
+      if (alarmPressElapsed < 90) {
+        alarmButton.position.y = THREE.MathUtils.lerp(0.92, 0.82, alarmPressElapsed / 90);
+      } else if (alarmPressElapsed < 260) {
+        alarmButton.position.y = THREE.MathUtils.lerp(0.82, 0.92, (alarmPressElapsed - 90) / 170);
+      } else {
+        alarmButton.position.y = 0.92;
+        alarmPressStartedRef.current = null;
+      }
 
       if (gameTimeRef.current !== displayedClockTime) {
           displayedClockTime = gameTimeRef.current;
