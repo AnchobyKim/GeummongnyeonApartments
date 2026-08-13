@@ -50,6 +50,17 @@ const SOUNDS = {
   radioStatic: findSoundAsset("freesound_community-radio-static-2-26831.mp3"),
 } as const;
 
+const BOARD_NOTICE_POSITIONS: Record<string, { x: number; y: number; topRow: boolean }> = {
+  "board_liftnotice.png": { x: 0.41, y: 0.48, topRow: true },
+  "board_forkid.png": { x: 1.0, y: 0.5, topRow: true },
+  "board_cctvnotice.png": { x: 2.1, y: 0.45, topRow: true },
+  "board_apartrepair.png": { x: 2.6, y: 0.46, topRow: true },
+  "board_residentnotice.png": { x: 0.41, y: -0.02, topRow: false },
+  "board_planner.png": { x: 1.0, y: 0.0, topRow: false },
+  "board_nosmoking.png": { x: 2.1, y: -0.05, topRow: false },
+  "board_noise.png": { x: 2.6, y: -0.04, topRow: false },
+};
+
 const complexGateVideo = Object.entries(environmentAssets).find(([path]) =>
   path.replaceAll("\\", "/").toLowerCase().endsWith("/complexgate.mp4"),
 )?.[1];
@@ -568,7 +579,7 @@ export function Game() {
     noticeBoard.add(createBox([0.18, 1.23, 0.1], [-3.855, 2.02, 1.5], 0x241a12));
 
     const textureLoader = new THREE.TextureLoader();
-    Object.values(boardAssets).sort().forEach((url, index) => {
+    Object.entries(boardAssets).sort(([left], [right]) => left.localeCompare(right)).forEach(([path, url]) => {
       const paperMaterial = new THREE.MeshBasicMaterial({
         toneMapped: false,
         transparent: true,
@@ -589,10 +600,16 @@ export function Game() {
       texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
       paperMaterial.map = texture;
       boardTextures.push(texture);
-      const column = index % 4;
-      const row = Math.floor(index / 4);
-      const paperDistanceFromBoard = row === 0 ? 0.052 : 0.051;
-      paper.position.set(-3.815 + paperDistanceFromBoard, 2.28 - row * 0.52, -1.56 + column * 0.84);
+      const filename = path.replaceAll("\\", "/").split("/").at(-1)?.toLowerCase() ?? "";
+      const placement = BOARD_NOTICE_POSITIONS[filename] ?? { x: 1.725, y: 0.5425, topRow: true };
+      const paperDistanceFromBoard = placement.topRow ? 0.052 : 0.051;
+      const boardLeftZ = 1.425;
+      const boardBottomY = 1.4775;
+      paper.position.set(
+        -3.815 + paperDistanceFromBoard,
+        boardBottomY + placement.y,
+        boardLeftZ - placement.x,
+      );
       paper.rotation.y = Math.PI / 2;
       noticeBoard.add(paper);
     });
@@ -816,7 +833,7 @@ export function Game() {
     fanSound.position.set(0, 0.88, 0);
     fanSoundRef.current = fanSound;
     fan.add(fanSound);
-    loadLoopingSound(fanSound, SOUNDS.fan, 0.16);
+    loadLoopingSound(fanSound, SOUNDS.fan, 0.208);
 
     const cricketSound = new THREE.PositionalAudio(audioListener);
     cricketSound.setRefDistance(2.2);
@@ -825,7 +842,7 @@ export function Game() {
     cricketSound.position.set(0, 2.2, -0.25);
     cricketSoundRef.current = cricketSound;
     windowGroup.add(cricketSound);
-    loadLoopingSound(cricketSound, SOUNDS.cricket, 0.11);
+    loadLoopingSound(cricketSound, SOUNDS.cricket, 0.132);
 
     const staticSound = new THREE.PositionalAudio(audioListener);
     staticSound.setRefDistance(1.1);
