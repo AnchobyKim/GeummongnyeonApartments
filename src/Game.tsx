@@ -505,27 +505,39 @@ export function Game() {
 
     const textureLoader = new THREE.TextureLoader();
     Object.values(boardAssets).sort().forEach((url, index) => {
-      const texture = textureLoader.load(url);
+      const paperMaterial = new THREE.MeshBasicMaterial({ toneMapped: false });
+      const paper = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), paperMaterial);
+      paper.scale.set(0.52, 0.52, 1);
+      const texture = textureLoader.load(url, (loadedTexture) => {
+        const image = loadedTexture.image as HTMLImageElement;
+        const aspect = image.naturalWidth / image.naturalHeight;
+        const maxWidth = 0.72;
+        const maxHeight = 0.56;
+        const width = Math.min(maxWidth, maxHeight * aspect);
+        paper.scale.set(width, width / aspect, 1);
+      });
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      paperMaterial.map = texture;
       boardTextures.push(texture);
-      const paper = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.72, 0.48),
-        new THREE.MeshBasicMaterial({ map: texture, toneMapped: false }),
-      );
       const column = index % 4;
       const row = Math.floor(index / 4);
       paper.position.set(-3.805, 2.36 - row * 0.69, -1.56 + column * 0.84);
       paper.rotation.y = Math.PI / 2;
       noticeBoard.add(paper);
     });
+    noticeBoard.position.z = 1.75;
     room.add(noticeBoard);
+
+    const boardLight = new THREE.PointLight(0xd6c69d, 3.2, 3.4, 2);
+    boardLight.position.set(-3.15, 2.62, 1.55);
+    scene.add(boardLight);
 
     const windowGroup = new THREE.Group();
     let exteriorVideo: HTMLVideoElement | null = null;
     let exteriorTexture: THREE.VideoTexture | null = null;
     const windowGlass = new THREE.Mesh(
-      new THREE.PlaneGeometry(3.84, 2.88),
+      new THREE.PlaneGeometry(4.8, 2.88),
       new THREE.MeshBasicMaterial({ color: 0x07100d }),
     );
     windowGlass.position.set(0, 2.34, -2.065);
@@ -542,6 +554,8 @@ export function Game() {
       exteriorTexture.colorSpace = THREE.SRGBColorSpace;
       exteriorTexture.minFilter = THREE.LinearFilter;
       exteriorTexture.magFilter = THREE.LinearFilter;
+      exteriorTexture.repeat.set(1, 0.8);
+      exteriorTexture.offset.set(0, 0.2);
       windowGlass.material = new THREE.MeshBasicMaterial({ map: exteriorTexture, toneMapped: false });
       void exteriorVideo.play().catch(() => undefined);
     } else {
@@ -550,12 +564,12 @@ export function Game() {
 
     windowGroup.add(windowGlass);
     const frameColor = 0x171b18;
-    windowGroup.add(createBox([4.12, 0.14, 0.14], [0, 3.85, -1.99], frameColor));
-    windowGroup.add(createBox([4.12, 0.14, 0.14], [0, 0.83, -1.99], frameColor));
-    windowGroup.add(createBox([0.14, 3.16, 0.14], [-1.99, 2.34, -1.99], frameColor));
-    windowGroup.add(createBox([0.14, 3.16, 0.14], [1.99, 2.34, -1.99], frameColor));
+    windowGroup.add(createBox([5.08, 0.14, 0.14], [0, 3.85, -1.99], frameColor));
+    windowGroup.add(createBox([5.08, 0.14, 0.14], [0, 0.83, -1.99], frameColor));
+    windowGroup.add(createBox([0.14, 3.16, 0.14], [-2.47, 2.34, -1.99], frameColor));
+    windowGroup.add(createBox([0.14, 3.16, 0.14], [2.47, 2.34, -1.99], frameColor));
     windowGroup.add(createBox([0.1, 3.02, 0.12], [0, 2.34, -1.98], frameColor));
-    windowGroup.add(createBox([3.98, 0.1, 0.12], [0, 2.34, -1.98], frameColor));
+    windowGroup.add(createBox([4.94, 0.1, 0.12], [0, 2.34, -1.98], frameColor));
     room.add(windowGroup);
 
     const desk = createBox([4.6, 0.18, 1.7], [0, 0.78, 0.05], 0x3b281d);
